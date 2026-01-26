@@ -1,0 +1,15 @@
+# Drupal generated files
+/web/sites/default/files/
+/web/sites/default/files/**
+
+# SQLite database
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
