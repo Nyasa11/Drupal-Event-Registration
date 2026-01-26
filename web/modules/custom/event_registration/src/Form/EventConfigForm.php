@@ -24,7 +24,7 @@ class EventConfigForm extends FormBase {
 
     $form['event_name'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Event Name'),         #Translation function
+      '#title' => $this->t('Event Name'),
       '#required' => TRUE,
     ];
 
@@ -32,6 +32,7 @@ class EventConfigForm extends FormBase {
       '#type' => 'select',
       '#title' => $this->t('Category of Event'),
       '#options' => [
+        '' => $this->t('- Select -'),
         'online_workshop' => $this->t('Online Workshop'),
         'hackathon' => $this->t('Hackathon'),
         'conference' => $this->t('Conference'),
@@ -64,6 +65,31 @@ class EventConfigForm extends FormBase {
     ];
 
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $event_date = $form_state->getValue('event_date');
+    $start_date = $form_state->getValue('registration_start_date');
+    $end_date = $form_state->getValue('registration_end_date');
+
+    // Registration end date must be after start date.
+    if ($start_date > $end_date) {
+      $form_state->setErrorByName(
+        'registration_end_date',
+        $this->t('Registration end date must be after start date.')
+      );
+    }
+
+    // Event date must be after registration end date.
+    if ($event_date < $end_date) {
+      $form_state->setErrorByName(
+        'event_date',
+        $this->t('Event date must be after registration end date.')
+      );
+    }
   }
 
   /**
