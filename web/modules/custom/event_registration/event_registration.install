@@ -1,0 +1,68 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for event_registration module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function event_registration_schema() {
+  $schema = [];
+
+  // Event configuration table.
+  $schema['event_config'] = [
+    'description' => 'Stores event configuration details.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique event ID.',
+      ],
+      'event_name' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Name of the event.',
+      ],
+      'event_category' => [
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'description' => 'Category of the event.',
+      ],
+      'event_date' => [
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'description' => 'Date of the event (YYYY-MM-DD).',
+      ],
+      'registration_start_date' => [
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'description' => 'Registration start date (YYYY-MM-DD).',
+      ],
+      'registration_end_date' => [
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'description' => 'Registration end date (YYYY-MM-DD).',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp when event was created.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'event_category' => ['event_category'],
+      'event_date' => ['event_date'],
+    ],
+  ];
+
+  return $schema;
+}
