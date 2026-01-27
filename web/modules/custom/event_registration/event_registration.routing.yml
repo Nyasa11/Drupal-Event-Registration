@@ -1,7 +1,15 @@
 event_registration.config_form:
-  path: '/admin/config/event-registration' #url to visit
+  path: '/admin/config/event-registration'
   defaults:
-    _form: '\Drupal\event_registration\Form\EventConfigForm' #Php class that builds the form
+    _form: '\Drupal\event_registration\Form\EventConfigForm'
     _title: 'Event Registration Settings'
   requirements:
-    _permission: 'administer site configuration' #only admins can access this page
+    _permission: 'administer site configuration'
+
+event_registration.view_events:
+  path: '/admin/event-registration/view-events'
+  defaults:
+    _controller: '\Drupal\event_registration\Controller\ViewEventsController::viewEvents'
+    _title: 'View Events'
+  requirements:
+    _permission: 'administer site configuration'
