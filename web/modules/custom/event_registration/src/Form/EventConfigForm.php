@@ -95,8 +95,20 @@ class EventConfigForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
-    $this->messenger()->addMessage($this->t('Event configuration saved (not stored yet).'));
+  public function submitForm(array &$form, FormStateInterface $form_state) 
+  {
+     // Insert data into database.
+     \Drupal::database()->insert('event_config')
+    ->fields([
+      'event_name' => $form_state->getValue('event_name'),
+      'event_category' => $form_state->getValue('event_category'),
+      'event_date' => $form_state->getValue('event_date'),
+      'registration_start_date' => $form_state->getValue('registration_start_date'),
+      'registration_end_date' => $form_state->getValue('registration_end_date'),
+      'created' => time(),
+    ])
+    ->execute();
+    $this->messenger()->addMessage($this->t('Event saved successfully to database!'));  
   }
 
 }
