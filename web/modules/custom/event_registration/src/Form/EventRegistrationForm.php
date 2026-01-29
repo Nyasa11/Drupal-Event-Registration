@@ -170,9 +170,11 @@ class EventRegistrationForm extends FormBase {
       ])
       ->execute();
 
-    // Success message.
+    // Personalized success message.
     $this->messenger()->addStatus(
-      $this->t('Registration submitted successfully!')
+      $this->t('Thank you, @name! Your registration has been submitted successfully.', [
+        '@name' => $full_name,
+      ])
     );
   }
 
