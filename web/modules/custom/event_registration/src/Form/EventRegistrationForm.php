@@ -66,7 +66,7 @@ class EventRegistrationForm extends FormBase {
       '#options' => [
         '' => $this->t('- Select Date -'),
       ],
-      '#required' => TRUE,
+      '#required' => FALSE,
     ];
 
     $form['event_name'] = [
@@ -75,7 +75,7 @@ class EventRegistrationForm extends FormBase {
       '#options' => [
         '' => $this->t('- Select Event -'),
       ],
-      '#required' => TRUE,
+      '#required' => False , 
     ];
 
     $form['submit'] = [
@@ -90,7 +90,40 @@ class EventRegistrationForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    // Validation will be added in next phase
+    // Get form values.
+    $full_name = $form_state->getValue('full_name');
+    $college_name = $form_state->getValue('college_name');
+    $department = $form_state->getValue('department');
+    $email = $form_state->getValue('email');
+
+    // Check for special characters in Full Name.
+    if (!preg_match('/^[a-zA-Z\s]+$/', $full_name)) {
+      $form_state->setErrorByName('full_name', 
+        $this->t('Full Name should not contain special characters or numbers.')
+      );
+    }
+
+    // Check for special characters in College Name.
+    if (!preg_match('/^[a-zA-Z0-9\s]+$/', $college_name)) {
+      $form_state->setErrorByName('college_name', 
+        $this->t('College Name should not contain special characters.')
+      );
+    }
+
+    // Check for special characters in Department.
+    if (!preg_match('/^[a-zA-Z\s]+$/', $department)) {
+      $form_state->setErrorByName('department', 
+        $this->t('Department should not contain special characters or numbers.')
+      );
+    }
+
+    // Email validation is automatic with #type => 'email',
+    // but let's add a custom check to be safe.
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+      $form_state->setErrorByName('email', 
+        $this->t('Please enter a valid email address.')
+      );
+    }
   }
 
   /**
