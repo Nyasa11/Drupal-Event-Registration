@@ -159,6 +159,7 @@ class EventRegistrationForm extends FormBase {
     $event_id = $event_name ? $event_name : 1;
 
     // Insert into database.
+    try{
     \Drupal::database()->insert('event_registration')
       ->fields([
         'full_name' => $full_name,
@@ -176,6 +177,17 @@ class EventRegistrationForm extends FormBase {
         '@name' => $full_name,
       ])
     );
+    }
+    catch (\Exception $e) {
+      // Show user-friendly error.
+      $this->messenger()->addError(
+        $this->t('An error occurred. Please try again.')
+      );
+      
+      // Log error for debugging.
+      \Drupal::logger('event_registration')->error('Registration save failed: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+    }
   }
-
 }
