@@ -51,4 +51,32 @@ class ViewEventsController extends ControllerBase {
       '#markup' => '<h2>Database Check</h2><p>' . $message . '</p>',
     ];
   }
+  /**
+   * Display all user registrations.
+   */
+  public function viewRegistrations() {
+    $query = \Drupal::database()->select('event_registration', 'er')
+      ->fields('er')
+      ->execute();
+
+    $rows = [];
+    foreach ($query as $record) {
+      $rows[] = [
+        $record->id,
+        $record->full_name,
+        $record->email,
+        $record->college_name,
+        $record->department,
+        $record->event_id,
+        date('Y-m-d H:i:s', $record->created),
+      ];
+    }
+
+    return [
+      '#theme' => 'table',
+      '#header' => ['ID', 'Name', 'Email', 'College', 'Department', 'Event ID', 'Created'],
+      '#rows' => $rows,
+      '#empty' => $this->t('No registrations found.'),
+    ];
+  }
 }
