@@ -148,7 +148,32 @@ class EventRegistrationForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $this->messenger()->addMessage($this->t('Registration submitted (not saved yet).'));
+    // Get form values.
+    $full_name = $form_state->getValue('full_name');
+    $email = $form_state->getValue('email');
+    $college_name = $form_state->getValue('college_name');
+    $department = $form_state->getValue('department');
+    $event_name = $form_state->getValue('event_name');
+
+    // Temporary: use 1 as event_id until AJAX is implemented.
+    $event_id = $event_name ? $event_name : 1;
+
+    // Insert into database.
+    \Drupal::database()->insert('event_registration')
+      ->fields([
+        'full_name' => $full_name,
+        'email' => $email,
+        'college_name' => $college_name,
+        'department' => $department,
+        'event_id' => $event_id,
+        'created' => time(),
+      ])
+      ->execute();
+
+    // Success message.
+    $this->messenger()->addStatus(
+      $this->t('Registration submitted successfully!')
+    );
   }
 
 }
