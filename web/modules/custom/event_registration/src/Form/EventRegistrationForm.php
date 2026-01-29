@@ -75,7 +75,7 @@ class EventRegistrationForm extends FormBase {
       '#options' => [
         '' => $this->t('- Select Event -'),
       ],
-      '#required' => False , 
+      '#required' => FALSE,
     ];
 
     $form['submit'] = [
@@ -123,6 +123,24 @@ class EventRegistrationForm extends FormBase {
       $form_state->setErrorByName('email', 
         $this->t('Please enter a valid email address.')
       );
+    }
+    // Check for duplicate registration (email + event_date).
+    $event_date = $form_state->getValue('event_date');
+
+    // Only check if both email and event_date are provided.
+    if ($email && $event_date) {
+      $query = \Drupal::database()->select('event_registration', 'er')
+        ->fields('er', ['id'])
+        ->condition('email', $email)
+        ->condition('event_id', $event_date)  // We'll fix this later when AJAX is done
+        ->execute()
+        ->fetchField();
+
+      if ($query) {
+        $form_state->setErrorByName('email', 
+          $this->t('You have already registered for this event.')
+        );
+      }
     }
   }
 
