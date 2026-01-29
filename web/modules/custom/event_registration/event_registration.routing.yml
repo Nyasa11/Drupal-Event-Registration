@@ -21,3 +21,11 @@ event_registration.settings:
     _title: 'Event Registration Settings'
   requirements:
     _permission: 'administer site configuration'
+  
+  event_registration.test_table:
+  path: '/admin/event-registration/test-table'
+  defaults:
+    _controller: '\Drupal\event_registration\Controller\ViewEventsController::testRegistrationTable'
+    _title: 'Test Registration Table'
+  requirements:
+    _permission: 'administer site configuration'
