@@ -58,24 +58,34 @@ class EventRegistrationForm extends FormBase {
         'oneday_workshop' => $this->t('One-day Workshop'),
       ],
       '#required' => TRUE,
+      '#ajax' => [
+        'callback' => '::updateDatesCallback',
+        'wrapper' => 'event-date-wrapper',
+        'event' => 'change',
+      ],
     ];
 
     $form['event_date'] = [
       '#type' => 'select',
       '#title' => $this->t('Event Date'),
-      '#options' => [
-        '' => $this->t('- Select Date -'),
-      ],
+      '#options' => $this->getDateOptions($form_state),
       '#required' => FALSE,
+      '#prefix' => '<div id="event-date-wrapper">',
+      '#suffix' => '</div>',
+      '#ajax' => [
+        'callback' => '::updateEventNamesCallback',
+        'wrapper' => 'event-name-wrapper',
+        'event' => 'change',
+      ],
     ];
 
     $form['event_name'] = [
       '#type' => 'select',
       '#title' => $this->t('Event Name'),
-      '#options' => [
-        '' => $this->t('- Select Event -'),
-      ],
+      '#options' => $this->getEventNameOptions($form_state),
       '#required' => FALSE,
+      '#prefix' => '<div id="event-name-wrapper">',
+      '#suffix' => '</div>',
     ];
 
     $form['submit'] = [
@@ -189,5 +199,66 @@ class EventRegistrationForm extends FormBase {
         '@error' => $e->getMessage(),
       ]);
     }
+  }
+  /**
+   * Get date options based on selected category.
+   */
+  protected function getDateOptions(FormStateInterface $form_state) {
+    $category = $form_state->getValue('event_category');
+    
+    $options = ['' => $this->t('- Select Date -')];
+    
+    if ($category) {
+      $query = \Drupal::database()->select('event_config', 'e')
+        ->fields('e', ['event_date'])
+        ->condition('event_category', $category)
+        ->distinct()
+        ->orderBy('event_date', 'ASC')
+        ->execute();
+      
+      foreach ($query as $record) {
+        $options[$record->event_date] = $record->event_date;
+      }
+    }
+    
+    return $options;
+  }
+
+  /**
+   * Get event name options based on selected category and date.
+   */
+  protected function getEventNameOptions(FormStateInterface $form_state) {
+    $category = $form_state->getValue('event_category');
+    $date = $form_state->getValue('event_date');
+    
+    $options = ['' => $this->t('- Select Event -')];
+    
+    if ($category && $date) {
+      $query = \Drupal::database()->select('event_config', 'e')
+        ->fields('e', ['id', 'event_name'])
+        ->condition('event_category', $category)
+        ->condition('event_date', $date)
+        ->execute();
+      
+      foreach ($query as $record) {
+        $options[$record->id] = $record->event_name;
+      }
+    }
+    
+    return $options;
+  }
+
+  /**
+   * AJAX callback for date dropdown.
+   */
+  public function updateDatesCallback(array &$form, FormStateInterface $form_state) {
+    return $form['event_date'];
+  }
+
+  /**
+   * AJAX callback for event name dropdown.
+   */
+  public function updateEventNamesCallback(array &$form, FormStateInterface $form_state) {
+    return $form['event_name'];
   }
 }
