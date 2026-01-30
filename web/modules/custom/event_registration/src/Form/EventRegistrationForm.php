@@ -169,9 +169,6 @@ class EventRegistrationForm extends FormBase {
     }
   }
 
-  /**
-   * {@inheritdoc}
-   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Get form values.
     $full_name = $form_state->getValue('full_name');
@@ -180,21 +177,22 @@ class EventRegistrationForm extends FormBase {
     $department = $form_state->getValue('department');
     $event_name = $form_state->getValue('event_name');
 
-    // Temporary: use 1 as event_id until AJAX is implemented.
+    // Event ID from selected event
     $event_id = $event_name ? $event_name : 1;
 
     // Insert into database.
-    try{
-    \Drupal::database()->insert('event_registration')
-      ->fields([
-        'full_name' => $full_name,
-        'email' => $email,
-        'college_name' => $college_name,
-        'department' => $department,
-        'event_id' => $event_id,
-        'created' => time(),
-      ])
-      ->execute();
+    try {
+      \Drupal::database()->insert('event_registration')
+        ->fields([
+          'full_name' => $full_name,
+          'email' => $email,
+          'college_name' => $college_name,
+          'department' => $department,
+          'event_id' => $event_id,
+          'created' => time(),
+        ])
+        ->execute();
+
       // Send confirmation email to user
       $this->emailService->sendUserConfirmation([
         'full_name' => $full_name,
@@ -202,12 +200,21 @@ class EventRegistrationForm extends FormBase {
         'event_id' => $event_id,
       ]);
 
-    // Personalized success message.
-    $this->messenger()->addStatus(
-      $this->t('Thank you, @name! Your registration has been submitted successfully.', [
-        '@name' => $full_name,
-      ])
-    );
+      // Send notification email to admin
+      $this->emailService->sendAdminNotification([
+        'full_name' => $full_name,
+        'email' => $email,
+        'college_name' => $college_name,
+        'department' => $department,
+        'event_id' => $event_id,
+      ]);
+
+      // Personalized success message.
+      $this->messenger()->addStatus(
+        $this->t('Thank you, @name! Your registration has been submitted successfully.', [
+          '@name' => $full_name,
+        ])
+      );
     }
     catch (\Exception $e) {
       // Show user-friendly error.
