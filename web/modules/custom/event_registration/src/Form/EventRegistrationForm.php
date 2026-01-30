@@ -69,7 +69,7 @@ class EventRegistrationForm extends FormBase {
       '#type' => 'select',
       '#title' => $this->t('Event Date'),
       '#options' => $this->getDateOptions($form_state),
-      '#required' => FALSE,
+      '#required' => TRUE,
       '#prefix' => '<div id="event-date-wrapper">',
       '#suffix' => '</div>',
       '#ajax' => [
@@ -83,7 +83,7 @@ class EventRegistrationForm extends FormBase {
       '#type' => 'select',
       '#title' => $this->t('Event Name'),
       '#options' => $this->getEventNameOptions($form_state),
-      '#required' => FALSE,
+      '#required' => TRUE,
       '#prefix' => '<div id="event-name-wrapper">',
       '#suffix' => '</div>',
     ];
