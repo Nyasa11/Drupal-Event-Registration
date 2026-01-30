@@ -1,0 +1,37 @@
+<?php
+
+/**
+ * @file
+ * Custom Event Registration module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function event_registration_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.event_registration':
+      return '<p>' . t('Module for managing event registrations.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_mail().
+ */
+function event_registration_mail($key, &$message, $params) {
+  switch ($key) {
+    case 'user_confirmation':
+      $message['from'] = \Drupal::config('system.site')->get('mail');
+      $message['subject'] = t('Event Registration Confirmation');
+      $message['body'][] = $params['message'];
+      break;
+
+    case 'admin_notification':
+      $message['from'] = \Drupal::config('system.site')->get('mail');
+      $message['subject'] = t('New Event Registration');
+      $message['body'][] = $params['message'];
+      break;
+  }
+}

@@ -48,9 +48,27 @@ class EmailService {
    *   Registration data array.
    */
   public function sendUserConfirmation(array $registration_data) {
-    // We'll implement this in next commit
-  }
+    $to = $registration_data['email'];
+    
+    // Get event details
+    $event = $this->database->select('event_config', 'e')
+      ->fields('e', ['event_name', 'event_date', 'event_category'])
+      ->condition('id', $registration_data['event_id'])
+      ->execute()
+      ->fetchObject();
 
+    // Build email message
+    $message = t("Dear @name,\n\nThank you for registering for our event!\n\nEvent Details:\n- Event: @event_name\n- Category: @category\n- Date: @date\n\nWe look forward to seeing you!\n\nBest regards,\nEvent Team", [
+      '@name' => $registration_data['full_name'],
+      '@event_name' => $event->event_name ?? 'N/A',
+      '@category' => $event->event_category ?? 'N/A',
+      '@date' => $event->event_date ?? 'N/A',
+    ]);
+
+    // Send email
+    $params = ['message' => $message];
+    $this->mailManager->mail('event_registration', 'user_confirmation', $to, 'en', $params);
+  }
   /**
    * Send notification email to admin.
    *

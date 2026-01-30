@@ -11,6 +11,21 @@ use Drupal\Core\Form\FormStateInterface;
 class EventRegistrationForm extends FormBase {
 
   /**
+   * The email service.
+   *
+   * @var \Drupal\event_registration\Service\EmailService
+   */
+  protected $emailService;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(\Symfony\Component\DependencyInjection\ContainerInterface $container) {
+    $instance = parent::create($container);
+    $instance->emailService = $container->get('event_registration.email_service');
+    return $instance;
+  }
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
@@ -180,6 +195,12 @@ class EventRegistrationForm extends FormBase {
         'created' => time(),
       ])
       ->execute();
+      // Send confirmation email to user
+      $this->emailService->sendUserConfirmation([
+        'full_name' => $full_name,
+        'email' => $email,
+        'event_id' => $event_id,
+      ]);
 
     // Personalized success message.
     $this->messenger()->addStatus(
