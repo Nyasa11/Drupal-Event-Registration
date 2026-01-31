@@ -13,3 +13,13 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Composer dependencies
+/vendor/
+
+# Drupal core and contributed modules
+/web/core/
+/web/modules/contrib/
+
+# Drupal settings
+/web/sites/default/settings.php
