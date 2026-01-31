@@ -1,0 +1,8 @@
+administer event registrations:
+  title: 'Administer Event Registrations'
+  description: 'Full access to manage event registrations and settings'
+  restrict access: TRUE
+
+view event registrations:
+  title: 'View Event Registrations'
+  description: 'View event registration submissions and export data'

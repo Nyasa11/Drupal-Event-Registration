@@ -36,4 +36,4 @@ event_registration.admin_list:
     _form: '\Drupal\event_registration\Form\RegistrationFilterForm'
     _title: 'Event Registrations'
   requirements:
-    _permission: 'administer site configuration'
+    _permission: 'view event registrations'
