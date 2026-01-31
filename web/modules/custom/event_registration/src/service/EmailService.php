@@ -35,7 +35,11 @@ class EmailService {
   /**
    * Constructor.
    */
-  public function __construct(MailManagerInterface $mail_manager, ConfigFactoryInterface $config_factory, Connection $database) {
+  public function __construct(
+    MailManagerInterface $mail_manager,
+    ConfigFactoryInterface $config_factory,
+    Connection $database
+  ) {
     $this->mailManager = $mail_manager;
     $this->configFactory = $config_factory;
     $this->database = $database;
@@ -43,81 +47,101 @@ class EmailService {
 
   /**
    * Send registration confirmation email to user.
-   *
-   * @param array $registration_data
-   *   Registration data array.
    */
   public function sendUserConfirmation(array $registration_data) {
     $to = $registration_data['email'];
-    
-    // Get event details
+
+    // Get event details.
     $event = $this->database->select('event_config', 'e')
       ->fields('e', ['event_name', 'event_date', 'event_category'])
       ->condition('id', $registration_data['event_id'])
       ->execute()
       ->fetchObject();
 
-    // Build email message
-    $message = t("Dear @name,\n\nThank you for registering for our event!\n\nEvent Details:\n- Event: @event_name\n- Category: @category\n- Date: @date\n\nWe look forward to seeing you!\n\nBest regards,\nEvent Team", [
-      '@name' => $registration_data['full_name'],
-      '@event_name' => $event->event_name ?? 'N/A',
-      '@category' => $event->event_category ?? 'N/A',
-      '@date' => $event->event_date ?? 'N/A',
-    ]);
+    // Build email message.
+    $message = t(
+      "Dear @name,\n\nThank you for registering for our event!\n\nEvent Details:\n- Event: @event_name\n- Category: @category\n- Date: @date\n\nWe look forward to seeing you!\n\nBest regards,\nEvent Team",
+      [
+        '@name' => $registration_data['full_name'],
+        '@event_name' => $event->event_name ?? 'N/A',
+        '@category' => $event->event_category ?? 'N/A',
+        '@date' => $event->event_date ?? 'N/A',
+      ]
+    );
 
-    // Send email
     $params = ['message' => $message];
-    $this->mailManager->mail('event_registration', 'user_confirmation', $to, 'en', $params);
+
+    // IMPORTANT: Do not fail registration if email fails.
+    try {
+      $this->mailManager->mail(
+        'event_registration',
+        'user_confirmation',
+        $to,
+        'en',
+        $params
+      );
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('event_registration')->error(
+        'User email failed: @message',
+        ['@message' => $e->getMessage()]
+      );
+    }
   }
+
   /**
    * Send notification email to admin.
-   *
-   * @param array $registration_data
-   *   Registration data array.
    */
   public function sendAdminNotification(array $registration_data) {
-    // Get admin email from settings
     $config = $this->configFactory->get('event_registration.settings');
     $admin_email = $config->get('admin_email');
     $notifications_enabled = $config->get('enable_admin_notifications');
 
-    // Only send if notifications are enabled
+    // If admin notifications are disabled, stop here.
     if (!$notifications_enabled || !$admin_email) {
       return;
     }
 
-    // Get event details
+    // Get event details.
     $event = $this->database->select('event_config', 'e')
       ->fields('e', ['event_name', 'event_date', 'event_category'])
       ->condition('id', $registration_data['event_id'])
       ->execute()
       ->fetchObject();
 
-    // Build email message
-    $message = t("New Event Registration\n\n" .
-      "Registrant Details:\n" .
-      "- Name: @name\n" .
-      "- Email: @email\n" .
-      "- College: @college\n" .
-      "- Department: @department\n\n" .
-      "Event Details:\n" .
-      "- Event: @event_name\n" .
-      "- Category: @category\n" .
-      "- Date: @date\n\n" .
-      "Registration received at: @time", [
-      '@name' => $registration_data['full_name'],
-      '@email' => $registration_data['email'],
-      '@college' => $registration_data['college_name'],
-      '@department' => $registration_data['department'],
-      '@event_name' => $event->event_name ?? 'N/A',
-      '@category' => $event->event_category ?? 'N/A',
-      '@date' => $event->event_date ?? 'N/A',
-      '@time' => date('Y-m-d H:i:s'),
-    ]);
+    // Build email message.
+    $message = t(
+      "New Event Registration\n\nRegistrant Details:\n- Name: @name\n- Email: @email\n- College: @college\n- Department: @department\n\nEvent Details:\n- Event: @event_name\n- Category: @category\n- Date: @date\n\nRegistration received at: @time",
+      [
+        '@name' => $registration_data['full_name'],
+        '@email' => $registration_data['email'],
+        '@college' => $registration_data['college_name'],
+        '@department' => $registration_data['department'],
+        '@event_name' => $event->event_name ?? 'N/A',
+        '@category' => $event->event_category ?? 'N/A',
+        '@date' => $event->event_date ?? 'N/A',
+        '@time' => date('Y-m-d H:i:s'),
+      ]
+    );
 
-    // Send email
     $params = ['message' => $message];
-    $this->mailManager->mail('event_registration', 'admin_notification', $admin_email, 'en', $params);
+
+    // IMPORTANT: Do not fail registration if email fails.
+    try {
+      $this->mailManager->mail(
+        'event_registration',
+        'admin_notification',
+        $admin_email,
+        'en',
+        $params
+      );
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('event_registration')->error(
+        'Admin email failed: @message',
+        ['@message' => $e->getMessage()]
+      );
+    }
   }
 
 }

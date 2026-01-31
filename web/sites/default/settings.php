@@ -821,3 +821,5 @@ $databases['default']['default'] = array (
   'autoload' => 'core/modules/sqlite/src/Driver/Database/sqlite/',
 );
 $settings['config_sync_directory'] = 'sites/default/files/config_UOoE-aBN0-uYu4fUfPR6Ld5uIAEUx4-hqT0_DOdAvmstDAj3ybTCKSaAaFjt7oxLGNCrUHaO4Q/sync';
+$config['system.mail']['interface']['default'] = 'php_mail';
+
