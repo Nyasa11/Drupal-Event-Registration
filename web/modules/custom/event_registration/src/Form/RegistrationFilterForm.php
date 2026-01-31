@@ -188,7 +188,89 @@ class RegistrationFilterForm extends FormBase {
    * Export registrations to CSV.
    */
   public function exportCsv(array &$form, FormStateInterface $form_state) {
-    // We'll implement this in next commit
+    $database = \Drupal::database();
+    
+    // Get filtered registrations
+    $date = $form_state->getValue('event_date');
+    $event_id = $form_state->getValue('event_name');
+    
+    $query = $database->select('event_registration', 'er');
+    $query->leftJoin('event_config', 'ec', 'er.event_id = ec.id');
+    
+    // Select fields explicitly with aliases
+    $query->addField('er', 'full_name');
+    $query->addField('er', 'email');
+    $query->addField('er', 'college_name');
+    $query->addField('er', 'department');
+    $query->addField('er', 'created');
+    $query->addField('ec', 'event_name', 'event_name');
+    $query->addField('ec', 'event_date', 'event_date');
+    $query->addField('ec', 'event_category', 'event_category');
+    
+    // Apply filters
+    if ($date) {
+      $query->condition('ec.event_date', $date);
+    }
+    
+    if ($event_id) {
+      $query->condition('er.event_id', $event_id);
+    }
+    
+    $query->orderBy('er.created', 'DESC');
+    
+    try {
+      $results = $query->execute()->fetchAll();
+      
+      // Create CSV content
+      $csv_data = [];
+      $csv_data[] = [
+        'Name',
+        'Email',
+        'College Name',
+        'Department',
+        'Event Name',
+        'Event Date',
+        'Event Category',
+        'Submission Date'
+      ];
+      
+      foreach ($results as $record) {
+        $csv_data[] = [
+          $record->full_name ?? '',
+          $record->email ?? '',
+          $record->college_name ?? '',
+          $record->department ?? '',
+          $record->event_name ?? 'N/A',
+          $record->event_date ?? 'N/A',
+          $record->event_category ?? 'N/A',
+          !empty($record->created) ? date('Y-m-d H:i:s', $record->created) : 'N/A',
+        ];
+      }
+      
+      // Generate CSV file
+      $filename = 'event_registrations_' . date('Y-m-d_His') . '.csv';
+      
+      $handle = fopen('php://temp', 'r+');
+      foreach ($csv_data as $row) {
+        fputcsv($handle, $row);
+      }
+      rewind($handle);
+      $csv_content = stream_get_contents($handle);
+      fclose($handle);
+      
+      // Send CSV response
+      $response = new \Symfony\Component\HttpFoundation\Response($csv_content);
+      $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
+      $response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
+      
+      $form_state->setResponse($response);
+      
+    } catch (\Exception $e) {
+      \Drupal::logger('event_registration')->error('CSV export failed: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      $this->messenger()->addError($this->t('Failed to export CSV. Please check the logs.'));
+    }
   }
 
   /**
