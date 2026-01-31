@@ -4,6 +4,8 @@ namespace Drupal\event_registration\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\event_registration\Service\EmailService;
 
 /**
  * Event Registration Form for users.
@@ -11,7 +13,7 @@ use Drupal\Core\Form\FormStateInterface;
 class EventRegistrationForm extends FormBase {
 
   /**
-   * The email service.
+   * Email service.
    *
    * @var \Drupal\event_registration\Service\EmailService
    */
@@ -20,11 +22,12 @@ class EventRegistrationForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public static function create(\Symfony\Component\DependencyInjection\ContainerInterface $container) {
+  public static function create(ContainerInterface $container) {
     $instance = parent::create($container);
     $instance->emailService = $container->get('event_registration.email_service');
     return $instance;
   }
+
   /**
    * {@inheritdoc}
    */
@@ -61,7 +64,6 @@ class EventRegistrationForm extends FormBase {
       '#required' => TRUE,
     ];
 
-    // Temporary hardcoded dropdown - will make dynamic with AJAX later
     $form['event_category'] = [
       '#type' => 'select',
       '#title' => $this->t('Category of Event'),
@@ -76,7 +78,6 @@ class EventRegistrationForm extends FormBase {
       '#ajax' => [
         'callback' => '::updateDatesCallback',
         'wrapper' => 'event-date-wrapper',
-        'event' => 'change',
       ],
     ];
 
@@ -90,7 +91,6 @@ class EventRegistrationForm extends FormBase {
       '#ajax' => [
         'callback' => '::updateEventNamesCallback',
         'wrapper' => 'event-name-wrapper',
-        'event' => 'change',
       ],
     ];
 
@@ -115,127 +115,139 @@ class EventRegistrationForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    // Get form values.
+
     $full_name = $form_state->getValue('full_name');
     $college_name = $form_state->getValue('college_name');
     $department = $form_state->getValue('department');
     $email = $form_state->getValue('email');
+    $event_id = $form_state->getValue('event_name');
 
-    // Check for special characters in Full Name.
     if (!preg_match('/^[a-zA-Z\s]+$/', $full_name)) {
-      $form_state->setErrorByName('full_name', 
+      $form_state->setErrorByName('full_name',
         $this->t('Full Name should not contain special characters or numbers.')
       );
     }
 
-    // Check for special characters in College Name.
     if (!preg_match('/^[a-zA-Z0-9\s]+$/', $college_name)) {
-      $form_state->setErrorByName('college_name', 
+      $form_state->setErrorByName('college_name',
         $this->t('College Name should not contain special characters.')
       );
     }
 
-    // Check for special characters in Department.
     if (!preg_match('/^[a-zA-Z\s]+$/', $department)) {
-      $form_state->setErrorByName('department', 
+      $form_state->setErrorByName('department',
         $this->t('Department should not contain special characters or numbers.')
       );
     }
 
-    // Email validation is automatic with #type => 'email',
-    // but let's add a custom check to be safe.
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-      $form_state->setErrorByName('email', 
+      $form_state->setErrorByName('email',
         $this->t('Please enter a valid email address.')
       );
     }
-    // Check for duplicate registration (email + event_date).
-    $event_date = $form_state->getValue('event_date');
 
-    // Only check if both email and event_date are provided.
-    if ($email && $event_date) {
-      $query = \Drupal::database()->select('event_registration', 'er')
+    // Prevent duplicate registration.
+    if ($email && $event_id) {
+      $exists = \Drupal::database()->select('event_registration', 'er')
         ->fields('er', ['id'])
         ->condition('email', $email)
-        ->condition('event_id', $event_date)  // We'll fix this later when AJAX is done
+        ->condition('event_id', $event_id)
         ->execute()
         ->fetchField();
 
-      if ($query) {
-        $form_state->setErrorByName('email', 
+      if ($exists) {
+        $form_state->setErrorByName('email',
           $this->t('You have already registered for this event.')
         );
       }
     }
+
+    // Registration date restriction.
+    if ($event_id) {
+      $event = \Drupal::database()->select('event_config', 'e')
+        ->fields('e', ['registration_start_date', 'registration_end_date'])
+        ->condition('id', $event_id)
+        ->execute()
+        ->fetchObject();
+
+      if ($event) {
+        $today = strtotime(date('Y-m-d'));
+        $start = strtotime($event->registration_start_date);
+        $end = strtotime($event->registration_end_date);
+
+        if ($today < $start) {
+          $form_state->setErrorByName('event_name',
+            $this->t('Registration has not started yet.')
+          );
+        }
+
+        if ($today > $end) {
+          $form_state->setErrorByName('event_name',
+            $this->t('Registration for this event is closed.')
+          );
+        }
+      }
+    }
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // Get form values.
-    $full_name = $form_state->getValue('full_name');
-    $email = $form_state->getValue('email');
-    $college_name = $form_state->getValue('college_name');
-    $department = $form_state->getValue('department');
-    $event_name = $form_state->getValue('event_name');
 
-    // Event ID from selected event
-    $event_id = $event_name ? $event_name : 1;
+    $event_id = $form_state->getValue('event_name');
 
-    // Insert into database.
     try {
       \Drupal::database()->insert('event_registration')
         ->fields([
-          'full_name' => $full_name,
-          'email' => $email,
-          'college_name' => $college_name,
-          'department' => $department,
+          'full_name' => $form_state->getValue('full_name'),
+          'email' => $form_state->getValue('email'),
+          'college_name' => $form_state->getValue('college_name'),
+          'department' => $form_state->getValue('department'),
           'event_id' => $event_id,
           'created' => time(),
         ])
         ->execute();
 
-      // Send confirmation email to user
       $this->emailService->sendUserConfirmation([
-        'full_name' => $full_name,
-        'email' => $email,
+        'full_name' => $form_state->getValue('full_name'),
+        'email' => $form_state->getValue('email'),
         'event_id' => $event_id,
       ]);
 
-      // Send notification email to admin
       $this->emailService->sendAdminNotification([
-        'full_name' => $full_name,
-        'email' => $email,
-        'college_name' => $college_name,
-        'department' => $department,
+        'full_name' => $form_state->getValue('full_name'),
+        'email' => $form_state->getValue('email'),
+        'college_name' => $form_state->getValue('college_name'),
+        'department' => $form_state->getValue('department'),
         'event_id' => $event_id,
       ]);
 
-      // Personalized success message.
       $this->messenger()->addStatus(
         $this->t('Thank you, @name! Your registration has been submitted successfully.', [
-          '@name' => $full_name,
+          '@name' => $form_state->getValue('full_name'),
         ])
       );
     }
     catch (\Exception $e) {
-      // Show user-friendly error.
       $this->messenger()->addError(
         $this->t('An error occurred. Please try again.')
       );
-      
-      // Log error for debugging.
-      \Drupal::logger('event_registration')->error('Registration save failed: @error', [
-        '@error' => $e->getMessage(),
-      ]);
+
+      \Drupal::logger('event_registration')->error(
+        'Registration save failed: @error',
+        ['@error' => $e->getMessage()]
+      );
     }
   }
+
   /**
-   * Get date options based on selected category.
+   * AJAX callbacks.
    */
   protected function getDateOptions(FormStateInterface $form_state) {
     $category = $form_state->getValue('event_category');
-    
     $options = ['' => $this->t('- Select Date -')];
-    
+
     if ($category) {
       $query = \Drupal::database()->select('event_config', 'e')
         ->fields('e', ['event_date'])
@@ -243,49 +255,39 @@ class EventRegistrationForm extends FormBase {
         ->distinct()
         ->orderBy('event_date', 'ASC')
         ->execute();
-      
+
       foreach ($query as $record) {
         $options[$record->event_date] = $record->event_date;
       }
     }
-    
+
     return $options;
   }
 
-  /**
-   * Get event name options based on selected category and date.
-   */
   protected function getEventNameOptions(FormStateInterface $form_state) {
     $category = $form_state->getValue('event_category');
     $date = $form_state->getValue('event_date');
-    
     $options = ['' => $this->t('- Select Event -')];
-    
+
     if ($category && $date) {
       $query = \Drupal::database()->select('event_config', 'e')
         ->fields('e', ['id', 'event_name'])
         ->condition('event_category', $category)
         ->condition('event_date', $date)
         ->execute();
-      
+
       foreach ($query as $record) {
         $options[$record->id] = $record->event_name;
       }
     }
-    
+
     return $options;
   }
 
-  /**
-   * AJAX callback for date dropdown.
-   */
   public function updateDatesCallback(array &$form, FormStateInterface $form_state) {
     return $form['event_date'];
   }
 
-  /**
-   * AJAX callback for event name dropdown.
-   */
   public function updateEventNamesCallback(array &$form, FormStateInterface $form_state) {
     return $form['event_name'];
   }
