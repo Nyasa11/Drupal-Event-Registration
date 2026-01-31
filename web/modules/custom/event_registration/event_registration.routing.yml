@@ -30,10 +30,10 @@ event_registration.register:
   requirements:
     _access: 'TRUE'
 
-event_registration.view_registrations:
-  path: '/admin/event-registration/view-registrations'
+event_registration.admin_list:
+  path: '/admin/event-registration/registrations'
   defaults:
-    _controller: '\Drupal\event_registration\Controller\ViewEventsController::viewRegistrations'
-    _title: 'View Registrations'
+    _form: '\Drupal\event_registration\Form\RegistrationFilterForm'
+    _title: 'Event Registrations'
   requirements:
     _permission: 'administer site configuration'
