@@ -6,6 +6,8 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\event_registration\Service\EmailService;
+use Drupal\Core\Database\Connection;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 
 /**
  * Event Registration Form for users.
@@ -20,11 +22,27 @@ class EventRegistrationForm extends FormBase {
   protected $emailService;
 
   /**
+   * Database connection.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
+  protected $database;
+
+  /**
+   * Logger factory.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  protected $loggerFactory;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     $instance = parent::create($container);
     $instance->emailService = $container->get('event_registration.email_service');
+    $instance->database = $container->get('database');
+    $instance->loggerFactory = $container->get('logger.factory');
     return $instance;
   }
 
@@ -122,24 +140,28 @@ class EventRegistrationForm extends FormBase {
     $email = $form_state->getValue('email');
     $event_id = $form_state->getValue('event_name');
 
+    // Check for special characters in Full Name.
     if (!preg_match('/^[a-zA-Z\s]+$/', $full_name)) {
       $form_state->setErrorByName('full_name',
         $this->t('Full Name should not contain special characters or numbers.')
       );
     }
 
+    // Check for special characters in College Name.
     if (!preg_match('/^[a-zA-Z0-9\s]+$/', $college_name)) {
       $form_state->setErrorByName('college_name',
         $this->t('College Name should not contain special characters.')
       );
     }
 
+    // Check for special characters in Department.
     if (!preg_match('/^[a-zA-Z\s]+$/', $department)) {
       $form_state->setErrorByName('department',
         $this->t('Department should not contain special characters or numbers.')
       );
     }
 
+    // Email format validation.
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
       $form_state->setErrorByName('email',
         $this->t('Please enter a valid email address.')
@@ -148,7 +170,7 @@ class EventRegistrationForm extends FormBase {
 
     // Prevent duplicate registration.
     if ($email && $event_id) {
-      $exists = \Drupal::database()->select('event_registration', 'er')
+      $exists = $this->database->select('event_registration', 'er')
         ->fields('er', ['id'])
         ->condition('email', $email)
         ->condition('event_id', $event_id)
@@ -164,7 +186,7 @@ class EventRegistrationForm extends FormBase {
 
     // Registration date restriction.
     if ($event_id) {
-      $event = \Drupal::database()->select('event_config', 'e')
+      $event = $this->database->select('event_config', 'e')
         ->fields('e', ['registration_start_date', 'registration_end_date'])
         ->condition('id', $event_id)
         ->execute()
@@ -198,7 +220,8 @@ class EventRegistrationForm extends FormBase {
     $event_id = $form_state->getValue('event_name');
 
     try {
-      \Drupal::database()->insert('event_registration')
+      // Save registration to database
+      $this->database->insert('event_registration')
         ->fields([
           'full_name' => $form_state->getValue('full_name'),
           'email' => $form_state->getValue('email'),
@@ -209,12 +232,14 @@ class EventRegistrationForm extends FormBase {
         ])
         ->execute();
 
+      // Send confirmation email to user.
       $this->emailService->sendUserConfirmation([
         'full_name' => $form_state->getValue('full_name'),
         'email' => $form_state->getValue('email'),
         'event_id' => $event_id,
       ]);
 
+      // Send notification email to admin.
       $this->emailService->sendAdminNotification([
         'full_name' => $form_state->getValue('full_name'),
         'email' => $form_state->getValue('email'),
@@ -223,6 +248,7 @@ class EventRegistrationForm extends FormBase {
         'event_id' => $event_id,
       ]);
 
+      // Show success message.
       $this->messenger()->addStatus(
         $this->t('Thank you, @name! Your registration has been submitted successfully.', [
           '@name' => $form_state->getValue('full_name'),
@@ -234,7 +260,8 @@ class EventRegistrationForm extends FormBase {
         $this->t('An error occurred. Please try again.')
       );
 
-      \Drupal::logger('event_registration')->error(
+      // Log error using injected logger.
+      $this->loggerFactory->get('event_registration')->error(
         'Registration save failed: @error',
         ['@error' => $e->getMessage()]
       );
@@ -242,14 +269,14 @@ class EventRegistrationForm extends FormBase {
   }
 
   /**
-   * AJAX callbacks.
+   * Get date options based on selected category.
    */
   protected function getDateOptions(FormStateInterface $form_state) {
     $category = $form_state->getValue('event_category');
     $options = ['' => $this->t('- Select Date -')];
 
     if ($category) {
-      $query = \Drupal::database()->select('event_config', 'e')
+      $query = $this->database->select('event_config', 'e')
         ->fields('e', ['event_date'])
         ->condition('event_category', $category)
         ->distinct()
@@ -264,13 +291,16 @@ class EventRegistrationForm extends FormBase {
     return $options;
   }
 
+  /**
+   * Get event name options based on selected category and date.
+   */
   protected function getEventNameOptions(FormStateInterface $form_state) {
     $category = $form_state->getValue('event_category');
     $date = $form_state->getValue('event_date');
     $options = ['' => $this->t('- Select Event -')];
 
     if ($category && $date) {
-      $query = \Drupal::database()->select('event_config', 'e')
+      $query = $this->database->select('event_config', 'e')
         ->fields('e', ['id', 'event_name'])
         ->condition('event_category', $category)
         ->condition('event_date', $date)
@@ -284,11 +314,18 @@ class EventRegistrationForm extends FormBase {
     return $options;
   }
 
+  /**
+   * AJAX callback to update date dropdown.
+   */
   public function updateDatesCallback(array &$form, FormStateInterface $form_state) {
     return $form['event_date'];
   }
 
+  /**
+   * AJAX callback to update event name dropdown.
+   */
   public function updateEventNamesCallback(array &$form, FormStateInterface $form_state) {
     return $form['event_name'];
   }
+
 }
