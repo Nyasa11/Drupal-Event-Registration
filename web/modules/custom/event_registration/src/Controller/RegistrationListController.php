@@ -3,7 +3,7 @@
 namespace Drupal\event_registration\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Controller for viewing and managing event registrations.
@@ -11,11 +11,27 @@ use Symfony\Component\HttpFoundation\Response;
 class RegistrationListController extends ControllerBase {
 
   /**
+   * The form builder.
+   *
+   * @var \Drupal\Core\Form\FormBuilderInterface
+   */
+  protected $formBuilder;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    $instance = parent::create($container);
+    $instance->formBuilder = $container->get('form_builder');
+    return $instance;
+  }
+
+  /**
    * Display registration listing page with filters.
    */
   public function listRegistrations() {
     // Build the filter form
-    $form = \Drupal::formBuilder()->getForm('Drupal\event_registration\Form\RegistrationFilterForm');
+    $form = $this->formBuilder->getForm('Drupal\event_registration\Form\RegistrationFilterForm');
 
     return [
       'form' => $form,

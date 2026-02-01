@@ -3,6 +3,8 @@
 namespace Drupal\event_registration\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Database\Connection;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Controller to view saved events.
@@ -10,10 +12,26 @@ use Drupal\Core\Controller\ControllerBase;
 class ViewEventsController extends ControllerBase {
 
   /**
+   * Database connection.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
+  protected $database;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    $instance = parent::create($container);
+    $instance->database = $container->get('database');
+    return $instance;
+  }
+
+  /**
    * Display all saved events.
    */
   public function viewEvents() {
-    $query = \Drupal::database()->select('event_config', 'e')
+    $query = $this->database->select('event_config', 'e')
       ->fields('e')
       ->execute();
 
@@ -37,11 +55,12 @@ class ViewEventsController extends ControllerBase {
       '#empty' => $this->t('No events found.'),
     ];
   }
+
   /*
    * Test if registration table exists.
    */
   public function testRegistrationTable() {
-    $table_exists = \Drupal::database()->schema()->tableExists('event_registration');
+    $table_exists = $this->database->schema()->tableExists('event_registration');
     
     $message = $table_exists 
       ? '✅ event_registration table EXISTS' 
@@ -51,11 +70,12 @@ class ViewEventsController extends ControllerBase {
       '#markup' => '<h2>Database Check</h2><p>' . $message . '</p>',
     ];
   }
+
   /**
    * Display all user registrations.
    */
   public function viewRegistrations() {
-    $query = \Drupal::database()->select('event_registration', 'er')
+    $query = $this->database->select('event_registration', 'er')
       ->fields('er')
       ->execute();
 
