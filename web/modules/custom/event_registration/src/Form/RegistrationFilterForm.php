@@ -4,11 +4,39 @@ namespace Drupal\event_registration\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-
+use Drupal\Core\Database\Connection;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 /**
  * Filter form for registration listings.
  */
+
 class RegistrationFilterForm extends FormBase {
+
+  /**
+   * Database connection.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
+  protected $database;
+
+  /**
+   * Logger factory.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  protected $loggerFactory;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    $instance = parent::create($container);
+    $instance->database = $container->get('database');
+    $instance->loggerFactory = $container->get('logger.factory');
+    return $instance;
+  }
 
   /**
    * {@inheritdoc}
@@ -21,7 +49,6 @@ class RegistrationFilterForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-
     // Event Date filter
     $form['event_date'] = [
       '#type' => 'select',
@@ -62,7 +89,8 @@ class RegistrationFilterForm extends FormBase {
     
     // Display total count
     $form['registrations_table']['count'] = [
-      '#markup' => '<h3>' . $this->t('Total Participants: @count', ['@count' => count($registrations)]) . '</h3>',
+      '#markup' => '<h3>' . $this->t('Total Participants: @count', [
+        '@count' => count($registrations)]) . '</h3>',
     ];
 
     // Build table
@@ -96,7 +124,7 @@ class RegistrationFilterForm extends FormBase {
   protected function getDateOptions() {
     $options = [];
     
-    $query = \Drupal::database()->select('event_config', 'e')
+    $query = $this->database->select('event_config', 'e')
       ->fields('e', ['event_date'])
       ->distinct()
       ->orderBy('event_date', 'DESC')
@@ -117,7 +145,7 @@ class RegistrationFilterForm extends FormBase {
     $date = $form_state->getValue('event_date');
     
     if ($date) {
-      $query = \Drupal::database()->select('event_config', 'e')
+      $query = $this->database->select('event_config', 'e')
         ->fields('e', ['id', 'event_name'])
         ->condition('event_date', $date)
         ->execute();
@@ -136,20 +164,16 @@ class RegistrationFilterForm extends FormBase {
   protected function getFilteredRegistrations(FormStateInterface $form_state) {
     $rows = [];
     
-    $query = \Drupal::database()->select('event_registration', 'er');
+    $query = $this->database->select('event_registration', 'er');
     $query->leftJoin('event_config', 'ec', 'er.event_id = ec.id');
     $query->fields('er', ['full_name', 'email', 'college_name', 'department', 'created']);
     $query->fields('ec', ['event_date']);
     
-    // Apply filters
-    $date = $form_state->getValue('event_date');
-    $event_id = $form_state->getValue('event_name');
-    
-    if ($date) {
+    if ($date = $form_state->getValue('event_date')) {
       $query->condition('ec.event_date', $date);
     }
-    
-    if ($event_id) {
+
+    if ($event_id = $form_state->getValue('event_name')) {
       $query->condition('er.event_id', $event_id);
     }
     
@@ -188,7 +212,7 @@ class RegistrationFilterForm extends FormBase {
    * Export registrations to CSV.
    */
   public function exportCsv(array &$form, FormStateInterface $form_state) {
-    $database = \Drupal::database();
+    $database = $this->database;
     
     // Get filtered registrations
     $date = $form_state->getValue('event_date');
@@ -266,7 +290,7 @@ class RegistrationFilterForm extends FormBase {
       $form_state->setResponse($response);
       
     } catch (\Exception $e) {
-      \Drupal::logger('event_registration')->error('CSV export failed: @error', [
+      $this->loggerFactory->get('event_registration')->error('CSV export failed: @error', [
         '@error' => $e->getMessage(),
       ]);
       $this->messenger()->addError($this->t('Failed to export CSV. Please check the logs.'));
