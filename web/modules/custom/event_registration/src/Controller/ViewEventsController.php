@@ -56,21 +56,6 @@ class ViewEventsController extends ControllerBase {
     ];
   }
 
-  /*
-   * Test if registration table exists.
-   */
-  public function testRegistrationTable() {
-    $table_exists = $this->database->schema()->tableExists('event_registration');
-    
-    $message = $table_exists 
-      ? '✅ event_registration table EXISTS' 
-      : '❌ event_registration table NOT FOUND';
-
-    return [
-      '#markup' => '<h2>Database Check</h2><p>' . $message . '</p>',
-    ];
-  }
-
   /**
    * Display all user registrations.
    */
