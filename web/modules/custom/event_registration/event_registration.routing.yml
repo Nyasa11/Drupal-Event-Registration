@@ -4,7 +4,8 @@ event_registration.config_form:
     _form: '\Drupal\event_registration\Form\EventConfigForm'
     _title: 'Event Configuration'
   requirements:
-    _permission: 'administer site configuration'
+    _permission: 'administer event registrations'
+
 
 event_registration.view_events:
   path: '/admin/event-registration/view-events'
@@ -12,7 +13,8 @@ event_registration.view_events:
     _controller: '\Drupal\event_registration\Controller\ViewEventsController::viewEvents'
     _title: 'View Events'
   requirements:
-    _permission: 'administer site configuration'
+    _permission: 'administer event registrations'
+
 
 event_registration.settings:
   path: '/admin/config/event-registration/settings'
@@ -20,7 +22,8 @@ event_registration.settings:
     _form: '\Drupal\event_registration\Form\SettingsForm'
     _title: 'Event Registration Settings'
   requirements:
-    _permission: 'administer site configuration'
+    _permission: 'administer event registrations'
+
 
 event_registration.register:
   path: '/event-registration'
