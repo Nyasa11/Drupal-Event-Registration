@@ -33,20 +33,17 @@ function event_registration_schema() {
         'description' => 'Category of the event.',
       ],
       'event_date' => [
-        'type' => 'varchar',
-        'length' => 20,
+        'type' => 'date',
         'not null' => TRUE,
         'description' => 'Date of the event (YYYY-MM-DD).',
       ],
       'registration_start_date' => [
-        'type' => 'varchar',
-        'length' => 20,
+        'type' => 'date',
         'not null' => TRUE,
         'description' => 'Registration start date (YYYY-MM-DD).',
       ],
       'registration_end_date' => [
-        'type' => 'varchar',
-        'length' => 20,
+        'type' => 'date',
         'not null' => TRUE,
         'description' => 'Registration end date (YYYY-MM-DD).',
       ],
