@@ -4,12 +4,28 @@ namespace Drupal\event_registration\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Database\Connection;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+
 
 /**
  * Event Configuration Form.
  */
 class EventConfigForm extends FormBase {
-
+/**
+ * Database connection.
+ *
+ * @var \Drupal\Core\Database\Connection
+ */
+protected $database;
+/**
+ * {@inheritdoc}
+ */
+public static function create(ContainerInterface $container) {
+  $instance = parent::create($container);
+  $instance->database = $container->get('database');
+  return $instance;
+}
   /**
    * {@inheritdoc}
    */
@@ -98,7 +114,7 @@ class EventConfigForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) 
   {
      // Insert data into database.
-     \Drupal::database()->insert('event_config')
+     $this->database->insert('event_config')
     ->fields([
       'event_name' => $form_state->getValue('event_name'),
       'event_category' => $form_state->getValue('event_category'),
