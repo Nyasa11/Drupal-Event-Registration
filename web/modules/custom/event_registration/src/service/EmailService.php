@@ -5,6 +5,8 @@ namespace Drupal\event_registration\Service;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Mail\MailManagerInterface;
+use Psr\Log\LoggerInterface;
+
 
 /**
  * Email service for event registration notifications.
@@ -31,18 +33,26 @@ class EmailService {
    * @var \Drupal\Core\Database\Connection
    */
   protected $database;
+  /**
+ * Logger.
+ *
+ * @var \Psr\Log\LoggerInterface
+ */
+ protected $logger;
 
   /**
    * Constructor.
    */
   public function __construct(
-    MailManagerInterface $mail_manager,
-    ConfigFactoryInterface $config_factory,
-    Connection $database
-  ) {
+  MailManagerInterface $mail_manager,
+  ConfigFactoryInterface $config_factory,
+  Connection $database,
+  LoggerInterface $logger
+) { 
     $this->mailManager = $mail_manager;
     $this->configFactory = $config_factory;
     $this->database = $database;
+    $this->logger = $logger;
   }
 
   /**
@@ -82,7 +92,7 @@ class EmailService {
       );
     }
     catch (\Exception $e) {
-      \Drupal::logger('event_registration')->error(
+      $this->logger->error(
         'User email failed: @message',
         ['@message' => $e->getMessage()]
       );
@@ -137,7 +147,7 @@ class EmailService {
       );
     }
     catch (\Exception $e) {
-      \Drupal::logger('event_registration')->error(
+      $this->logger->error(
         'Admin email failed: @message',
         ['@message' => $e->getMessage()]
       );
